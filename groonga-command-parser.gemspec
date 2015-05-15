@@ -53,7 +53,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency("groonga-command", ">= 1.0.9")
-  spec.add_runtime_dependency("yajl-ruby")
+#  spec.add_runtime_dependency("yajl-ruby")
+  spec.add_runtime_dependency("json-stream")
 
   spec.add_development_dependency("test-unit")
   spec.add_development_dependency("test-unit-notify")

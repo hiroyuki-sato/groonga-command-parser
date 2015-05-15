@@ -19,16 +19,20 @@
 require "English"
 require "cgi"
 
-require "yajl"
+#require "yajl"
+require 'json'
+require 'json/stream'
 
 require "groonga/command"
 
 require "groonga/command/parser/error"
 require "groonga/command/parser/command-line-splitter"
 require "groonga/command/parser/version"
+require "groonga/command/json-builder"
 
 module Groonga
   module Command
+
     class Parser
       class << self
 
@@ -91,7 +95,8 @@ module Groonga
           end
           parser.on_load_complete do |command|
             parsed_command = command
-            parsed_command[:values] ||= Yajl::Encoder.encode(values)
+            #parsed_command[:values] ||= Yajl::Encoder.encode(values)
+            parsed_command[:values] ||= values.to_json
           end
 
           consume_data(parser, data)
@@ -262,8 +267,11 @@ module Groonga
           else
             @command.original_source << spaces << start_json
             @buffer = rest
-            @json_parser = Yajl::Parser.new
-            @json_parser.on_parse_complete = lambda do |object|
+            #@json_parser = Yajl::Parser.new
+            @json_parser = JSON::Stream::Parser.new
+            @builder = Groonga::Command::JSONBuilder.new(@json_parser)
+#            @builder.on_parse_complete do |object|
+            @builder.on_parse_complete = lambda do |object|
               if object.is_a?(::Array) and @command.columns.nil?
                 @command.columns = object
                 on_load_columns(@command, object)
@@ -281,7 +289,7 @@ module Groonga
         @command.original_source << json
         begin
           @json_parser << json
-        rescue Yajl::ParseError
+        rescue JSON::Stream::ParserError
           before_json = @command.original_source[0..(-json.bytesize)]
           message = "invalid JSON: #{$!.message}: <#{json}>:\n"
           message << before_json
@@ -322,7 +330,7 @@ module Groonga
             on_load_columns(@command, @command.columns)
           end
           if @command[:values]
-            values = Yajl::Parser.parse(@command[:values])
+            values = JSON.parse(@command[:values])
             if @command.columns.nil? and values.first.is_a?(::Array)
               header = values.shift
               @command.columns = header
